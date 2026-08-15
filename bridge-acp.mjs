@@ -60,7 +60,7 @@ import {
 } from "./modules/misc.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.BRIDGE_PORT || 3457); // 阶段 3 切回 3456 前先独立端口
+const PORT = Number(process.env.BRIDGE_PORT || 3457); // 端口定案 3457；须与看门狗/LLOneBot 上报/插件 bridgeUrl 一致
 const DATA_ROOT = process.env.QQBOT_DIR || "/home/botuser/qq-bot";
 // 白名单优先放 DATA_ROOT（通用部署），兼容旧位置 __dirname（现状迁移期）
 const WHITELIST_FILE = existsSync(join(DATA_ROOT, "whitelist.json"))

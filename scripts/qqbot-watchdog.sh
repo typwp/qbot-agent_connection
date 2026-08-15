@@ -20,6 +20,9 @@ if [ -f /home/botuser/qq-bot/.env ]; then
   set +a
 fi
 TOKEN="${ONEBOT_TOKEN:-}"
+# 端口单一来源（v5）：桥、看门狗检查、LLOneBot 上报统一 BRIDGE_PORT（定案 3457）。
+# source .env 后取同一变量，检查与拉起永远一致，杜绝 check/launch 背离。
+BRIDGE_PORT="${BRIDGE_PORT:-3457}"
 FAKE_COUNT=0
 API_FAIL_COUNT=0
 
@@ -78,9 +81,9 @@ while true; do
   fi
   FAKE_COUNT=0
 
-  # 4. Bridge 端口在不在？（v4：ACP 桥 3457）
-  if ! ss -tln | grep -q ':3457 '; then
-    echo "[watchdog] bridge 不在线，尝试拉起 ACP 桥 $(date)" >> /root/start-bot.log
+  # 4. Bridge 端口在不在？（端口与拉起同一来源：${BRIDGE_PORT}）
+  if ! ss -tln | grep -q ":${BRIDGE_PORT} "; then
+    echo "[watchdog] bridge 不在线，尝试拉起 ACP 桥 ${BRIDGE_PORT} $(date)" >> /root/start-bot.log
     # ACP 桥前台阻塞拉起（exec 让 node 接管 bash；后台 & 挂到本看门狗 wsl 会话下常驻）
     # 桥日志单独落 bridge-acp.log（Windows 可见），看门狗自身诊断留 start-bot.log
     bash -c 'cd /mnt/d/qbot-agent_connection && exec node bridge-acp.mjs' >> "/mnt/d/qbot-agent_connection/bridge-acp.log" 2>&1 &
