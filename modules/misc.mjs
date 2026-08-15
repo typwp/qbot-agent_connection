@@ -53,13 +53,22 @@ export async function handleAnnounceCommand(raw, ctx) {
 		if (!ctx.isAdmin) return { reply: "你没有权限执行此操作" };
 		const content = announceCmd[1].trim();
 		const others = getAllUserIds(ctx.sessionMap).filter((u) => u !== ctx.uid);
-		_pendingAnnouncements.set(ctx.uid, { content });
+		_pendingAnnouncements.set(ctx.uid, { content, time: Date.now() });
 		return {
-			reply: `📋 公告草稿\n\n${content}\n\n——\n即将发送给 ${others.length} 位用户\n\n回复「确认」或「发」执行发送\n回复「取消」取消此次发送`,
+			reply: `📋 公告草稿\n\n${content}\n\n——\n即将发送给 ${others.length} 位用户\n\n回复「确认」或「发」执行发送\n回复「取消」取消此次发送（草稿 10 分钟有效）`,
 		};
 	}
 	if (_pendingAnnouncements.has(ctx.uid)) {
-		if (/^(确认|发(送)?|确定)$/i.test(raw)) {
+		const pending = _pendingAnnouncements.get(ctx.uid);
+		// 草稿 10 分钟超时：确认消息给作废提醒，其余消息静默作废放行（防过期误群发）
+		if (Date.now() - pending.time > 10 * 60 * 1000) {
+			_pendingAnnouncements.delete(ctx.uid);
+			if (/^(确认|发(送)?|确定)$/i.test(raw)) {
+				return {
+					reply: "⏰ 公告草稿已超时（10 分钟），已作废。请重新发送「发公告 <内容>」。",
+				};
+			}
+		} else if (/^(确认|发(送)?|确定)$/i.test(raw)) {
 			const { content } = _pendingAnnouncements.get(ctx.uid);
 			_pendingAnnouncements.delete(ctx.uid);
 			const footer =
