@@ -65,9 +65,15 @@ cp whitelist.example.json whitelist.json   # 填 admin/users 的 QQ
 mkdir -p data               # QQBOT_DIR（数据根）
 # 可选：外置人格（personas/<名称>.txt，设 BOT_PERSONA=<名称>；不设置则用内置 default）
 # 例：echo "你是 XX——一段人格描述" > personas/my-persona.txt  && echo 'BOT_PERSONA=my-persona' >> .env
+# 可选：机器人名称（欢迎语/被问"你是什么模型"的自称）与群聊名字唤醒词
+#   echo 'BOT_NAME=你的机器人名' >> .env
+#   echo 'WAKE_WORDS=名字A|名字B' >> .env
 ```
 
 LLOneBot 侧：OneBot11 配置里加一条 http-post 上报，URL 填 `http://<桥所在主机>:3457/message`（容器部署用 Docker 网关，如 `172.17.0.1:3457`）。
+
+> ⚠️ **端口一致性（3457 定案）**：LLOneBot 上报地址、桥 `BRIDGE_PORT`、看门狗检查端口、插件 `bridgeUrl` **必须全部一致**（默认 3457）。
+> 看门狗从 `.env` 读取 `BRIDGE_PORT` 作为端口单一来源，检查与拉起永远不会背离——只改 `.env` 一处即可整体迁移端口。
 
 ## 启动（⚠️ 重要：WSL 下不要用 nohup）
 
@@ -79,7 +85,7 @@ wsl -d <发行版> -u root -- bash -c 'cd /path/to/qq-bot && exec node bridge-ac
 ```
 
 或交给看门狗（推荐）：`scripts/qqbot-watchdog.sh` 四层守护（容器→API→伪在线→桥端口），
-桥掉线时用 `exec node` 前台方式拉起。Windows 侧可用计划任务登录触发：
+桥掉线时用 `exec node` 前台方式拉起；端口单一来源读 `.env` 的 `BRIDGE_PORT`。Windows 侧可用计划任务登录触发：
 `wsl -d <发行版> -u root -- bash /path/to/qqbot-watchdog.sh`。
 
 启动后日志应包含：监听端口、权限、会话数、自检/B站轮询/反馈汇总定时。
@@ -100,7 +106,8 @@ wsl -d <发行版> -u root -- bash -c 'cd /path/to/qq-bot && exec node bridge-ac
 帮助 / 额度 / 提醒我… / 提醒列表 / 取消提醒 #id
 记住… / 我的记忆 / 忘记全部
 订阅B站 <UID> / 订阅列表 / 取消订阅B站 <UID>
-存档 / 读档 / 存档列表 / /personality set <内容> / /prompt summarize
+存档 / 读档 / 存档列表 / 删除存档 <名称>
+/personality set <内容> / save <1|2|3> / load <1|2|3> / clear / summarize / view
 /new（重置前自动提取记忆） /new!（干净重开）
 /notify on|off（重启通知） /tokenusage /重启（admin）
 群聊：@我 / 喊机器人的名字（personas 人格里设定的称呼）/ /群人格 / 总结群聊 [条数] / /resetgroup
