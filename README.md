@@ -86,7 +86,7 @@ wsl -d <发行版> -u root -- bash -c 'cd /path/to/qq-bot && exec node bridge-ac
 
 ## 与 DSH（DeepSeek Harness）插件连接
 
-配套插件仓库 [dsh-plugins-by-Ty](https://github.com/typwp/dsh-plugins-by-Ty)，其中 `packages/dsh-qq-notify`（可选）：
+配套插件仓库 [dsh-pluginsANDskills-by-Ty](https://github.com/typwp/dsh-pluginsANDskills-by-Ty)，其中 `packages/dsh-qq-notify`（可选）：
 
 - **Harness → QQ**：插件配置 `bridgeUrl: http://127.0.0.1:3457/send`，`targetQq: <你的QQ>`，
   通知/审批消息经 `/send` 主动发到 QQ。
