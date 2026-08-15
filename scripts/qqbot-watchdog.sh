@@ -12,16 +12,19 @@
 
 echo "[watchdog] 启动 $(date)" >> /root/start-bot.log
 
-# LLOneBot access_token：从 qq-bot .env 读取（勿硬编码密钥入库）
-if [ -f /home/botuser/qq-bot/.env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . /home/botuser/qq-bot/.env
-  set +a
-fi
-TOKEN="${ONEBOT_TOKEN:-}"
+# 从 qq-bot .env 按需提取所需键（勿 source 整个 .env！）
+# 教训（2026-08-16）：.env 值含 | ; 空格 $ 等 shell 特殊字符时，source 会把它们当语法执行，
+# 曾触发意外命令（误启动 claude CLI 挂死看门狗），且 root source 任意配置 = 注入风险。
+# 方案：grep + cut 按需取值，并剥掉引号；外部环境变量优先。
+ENV_FILE=/home/botuser/qq-bot/.env
+get_env() {
+  [ -f "$ENV_FILE" ] || return
+  grep -E "^$1=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'"
+}
+TOKEN="${ONEBOT_TOKEN:-$(get_env ONEBOT_TOKEN)}"
 # 端口单一来源（v5）：桥、看门狗检查、LLOneBot 上报统一 BRIDGE_PORT（定案 3457）。
 # source .env 后取同一变量，检查与拉起永远一致，杜绝 check/launch 背离。
+BRIDGE_PORT="${BRIDGE_PORT:-$(get_env BRIDGE_PORT)}"
 BRIDGE_PORT="${BRIDGE_PORT:-3457}"
 FAKE_COUNT=0
 API_FAIL_COUNT=0
