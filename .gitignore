@@ -1,0 +1,28 @@
+# ── 个人/敏感文件：不入库 ──
+.env
+whitelist.json
+acp-sessions.json
+pending_friends.json
+*.log
+data/
+.chat-logs/
+.notify-default-off.marker
+
+# ── 依赖 ──
+node_modules/
+
+# ── 个人外置人格（部署者自备；如需公开示例请复制为 personas/amadeus.txt 再提交）──
+personas/kurisu.txt
+personas/*.local.txt
+
+# ── 个人/调试/测试脚本与残留（根目录级）──
+/*.sh
+poc-bridge.mjs
+test-*.mjs
+report-*.json
+send-test.json
+daily_quota.json
+qrcode.png
+old-bridge.js
+qqbot-watchdog-v3.sh
+qqbot-watchdog-v4.sh
