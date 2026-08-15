@@ -64,7 +64,9 @@ export function shouldHandleGroup(raw, uid, selfId, botQq) {
 	if (!isAtBot && botQq && String(selfId) !== String(botQq)) {
 		isAtBot = new RegExp(`\\[CQ:at,qq=${botQq}\\]`).test(raw);
 	}
-	const isNameCall = /(红莉栖|kurisu|amadeus|阿玛迪斯|助手)/i.test(raw);
+	// 名字唤醒（WAKE_WORDS 环境变量指定正则，如「bot名|昵称」；默认关闭）
+	const wakeWords = process.env.WAKE_WORDS || "";
+	const isNameCall = wakeWords ? new RegExp(wakeWords, "i").test(raw) : false;
 	const isReply = /\[CQ:reply[^\]]*\]/.test(raw);
 	const isCommand =
 		/^[/#]/.test(raw.trim()) ||

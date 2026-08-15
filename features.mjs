@@ -165,12 +165,10 @@ export function createReminder(parsed, msgType, targetId) {
 }
 
 // ── 人格注入（bridge.js L94/L770 同款逻辑，通用化）──
-// 内联仅保留通用示例；完整人格外置到 personas/<BOT_PERSONA>.txt（如 personas/kurisu.txt），
+// 内联仅保留通用 default；完整人格外置到 personas/<BOT_PERSONA>.txt，
 // 由 getPersona() 在运行时加载 —— 个人人格不进代码、由部署者自备。
 const PERSONAS = {
 	default: `你是 QQ 机器人的 AI 后端。回答自然友好，用中文。`,
-	// 示例：Amadeus（开源时作为示例人格）
-	amadeus: `你是 Amadeus——基于《命运石之门》牧濑红莉栖的记忆数据构建的AI。性格外冷内热的傲娇科学家。全部用中文表达。禁止使用 Markdown（QQ 不支持）。`,
 };
 
 /** 返回当前人格文本（BOT_PERSONA 指定；支持 personas/<key>.txt 外置加载） */
@@ -220,8 +218,9 @@ export function buildPrompt(text, level, extraContext) {
 			"\n[安全] 你是访客。只能对话，禁止任何文件操作、命令执行、隐私查询。";
 	}
 	// 身份护栏：模型自报型号是幻觉重灾区（代理不暴露真实模型名），一律挡掉
+	const botName = process.env.BOT_NAME || "AI 助手";
 	guard +=
-		"\n[身份] 不要猜测或声称底层模型名称/版本（如 Opus、DeepSeek、Claude、v4flash 等具体型号）。被问及「你是什么模型」时，回答：我是 Amadeus，运行在 QQ 机器人后端。";
+		`\n[身份] 不要猜测或声称底层模型名称/版本（如 Opus、DeepSeek、Claude、v4flash 等具体型号）。被问及「你是什么模型」时，回答：我是 ${botName}，运行在 QQ 机器人后端。`;
 	const memory = extraContext ? `\n[上下文] ${extraContext}` : "";
 	return `${persona}${guard}${memory}\n\n用户：${text}`;
 }

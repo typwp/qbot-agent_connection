@@ -63,8 +63,8 @@ git clone <本仓库> qq-bot && cd qq-bot
 cp .env.example .env        # 填 BOT_QQ / ONEBOT_URL / ONEBOT_TOKEN / BOT_PERSONA / QQBOT_DIR
 cp whitelist.example.json whitelist.json   # 填 admin/users 的 QQ
 mkdir -p data               # QQBOT_DIR（数据根）
-# 可选：外置人格
-# cp personas/amadeus.txt personas/kurisu.txt  # 或用你自己的 personas/<名称>.txt，设 BOT_PERSONA=<名称>
+# 可选：外置人格（personas/<名称>.txt，设 BOT_PERSONA=<名称>；不设置则用内置 default）
+# 例：echo "你是 XX——一段人格描述" > personas/my-persona.txt  && echo 'BOT_PERSONA=my-persona' >> .env
 ```
 
 LLOneBot 侧：OneBot11 配置里加一条 http-post 上报，URL 填 `http://<桥所在主机>:3457/message`（容器部署用 Docker 网关，如 `172.17.0.1:3457`）。
@@ -103,7 +103,7 @@ wsl -d <发行版> -u root -- bash -c 'cd /path/to/qq-bot && exec node bridge-ac
 存档 / 读档 / 存档列表 / /personality set <内容> / /prompt summarize
 /new（重置前自动提取记忆） /new!（干净重开）
 /notify on|off（重启通知） /tokenusage /重启（admin）
-群聊：@我 / 喊名字（红莉栖/Amadeus）/ /群人格 / 总结群聊 [条数] / /resetgroup
+群聊：@我 / 喊机器人的名字（personas 人格里设定的称呼）/ /群人格 / 总结群聊 [条数] / /resetgroup
 ```
 
 ## 安全说明

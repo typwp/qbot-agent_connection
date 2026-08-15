@@ -23,9 +23,9 @@ function claudeCwd() {
 	return process.env.CLAUDE_CWD || DATA_ROOT;
 }
 
-// 与旧桥 L112 同款：防人设漂移的身份提示（存档 payload 复用）
+// 与旧桥 L112 同款：防人设漂移的身份提示（存档 payload 复用；人格名称走 BOT_NAME）
 const identityHint =
-	"[身份: 你是Amadeus，牧濑红莉栖的AI副本，QQ机器人后端。保持傲娇科学家语气，善用颜文字。你不是群吉祥物、Q群管家或自动回复机。]\n[格式: QQ 不支持 Markdown。禁止使用 **、__、## 等 Markdown 语法。加粗用【】或换行强调替代。表情用颜文字(￣▽￣)而非emoji短代码。]";
+	`[身份: 你是${process.env.BOT_NAME || "AI 助手"}，QQ 机器人后端。保持设定的人格与语气，善用颜文字。你不是群吉祥物、Q群管家或自动回复机。]\n[格式: QQ 不支持 Markdown。禁止使用 **、__、## 等 Markdown 语法。加粗用【】或换行强调替代。表情用颜文字(￣▽￣)而非emoji短代码。]`;
 
 // ── user_prompts.json（/prompt set/save/load/clear）──
 export function loadUserPrompts() {

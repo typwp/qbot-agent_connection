@@ -611,7 +611,7 @@ async function handleMessage(msg) {
 				p[targetQQ].welcomed = true;
 				savePrefs(p);
 				const welcome = [
-					"👋 你好～我是 Amadeus，有什么想聊的随时找我～",
+					`👋 你好～我是 ${process.env.BOT_NAME || "AI 助手"}，有什么想聊的随时找我～`,
 					"",
 					"💡 一些提示：",
 					"▸ 重启通知已默认关闭，如需开启发「/notify on」",
@@ -693,7 +693,7 @@ async function handleMessage(msg) {
 		r += "  发图 — 自动识图\n";
 		r += "  反馈 <内容> — 建议/问题\n";
 		r += "  公告 — 历史公告\n";
-		r += "  群里喊「红莉栖/Amadeus」也能唤醒我，不用@\n";
+		r += "  群里 @我 就能唤醒我（配了 WAKE_WORDS 时喊名字也行），不用其他操作\n";
 		r += "  /new — 新对话（自动把要点存进长期记忆）\n";
 		r += "  /new! — 干净重开，不写长期记忆\n";
 		if (level === "admin" && isPrivate) {
@@ -758,7 +758,7 @@ async function handleMessage(msg) {
 			prefsNow[uid].welcomed = true;
 			savePrefs(prefsNow);
 			const welcome = [
-				"👋 你好～我是 Amadeus，有什么想聊的随时找我～",
+				`👋 你好～我是 ${process.env.BOT_NAME || "AI 助手"}，有什么想聊的随时找我～`,
 				"",
 				"💡 一些提示：",
 				"▸ 重启通知已默认关闭，如需开启发「/notify on」",
