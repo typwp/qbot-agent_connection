@@ -17,7 +17,7 @@ import { getPersona } from "../features.mjs";
 const DATA_ROOT = process.env.QQBOT_DIR || "/home/botuser/qq-bot";
 const USER_PROMPTS_FILE = join(DATA_ROOT, "user_prompts.json");
 const LOG_DIR = join(DATA_ROOT, ".chat-logs");
-// pm.js / prompt-profiles 挂 CLAUDE_CWD 下（.env 配置：/mnt/d/Claude）。
+// pm.js / prompt-profiles 挂 CLAUDE_CWD 下（.env 配置，例如 /mnt/d/Claude）。
 // 懒解析：.env 由桥在启动时加载，模块加载阶段读不到，故在调用时再拼路径。
 function claudeCwd() {
 	return process.env.CLAUDE_CWD || DATA_ROOT;

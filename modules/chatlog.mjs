@@ -1,6 +1,6 @@
 /**
  * chatlog.mjs — 会话日志 / token 账本 / 当前时间注入
- * 数据全部落在 WSL 侧（不再用旧桥的 /mnt/d/qbot-agent_connection/.chat-logs）
+ * 数据全部落在 WSL 侧（不再用旧桥的用户目录 .chat-logs）
  */
 import { mkdirSync, appendFileSync, readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";

@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { join } from "node:path";
 
 const DATA_ROOT = process.env.QQBOT_DIR || "/home/botuser/qq-bot";
-// vision.js 挂 CLAUDE_CWD 下（.env 配置：/mnt/d/Claude）。懒解析：.env 由桥启动时加载。
+// vision.js 挂 CLAUDE_CWD 下（.env 配置，例如 /mnt/d/Claude）。懒解析：.env 由桥启动时加载。
 function claudeCwd() {
 	return process.env.CLAUDE_CWD || DATA_ROOT;
 }

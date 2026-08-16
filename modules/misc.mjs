@@ -227,7 +227,7 @@ export function handleReminderCommand(raw, uid, reminders, cancelFn) {
 export function runSelfCheck() {
 	const issues = [];
 	const oks = [];
-	// pm.js / prompt-profiles 挂 CLAUDE_CWD 下（.env 配置：/mnt/d/Claude）；懒解析（.env 启动时才加载）
+	// pm.js / prompt-profiles 挂 CLAUDE_CWD 下（.env 配置，例如 /mnt/d/Claude）；懒解析（.env 启动时才加载）
 	const claudeCwd = process.env.CLAUDE_CWD || DATA_ROOT;
 	// 1. pm.js 语法
 	const pmPath = join(claudeCwd, "scripts", "pm.js");
