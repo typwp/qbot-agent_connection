@@ -1,5 +1,7 @@
 # ACP QQ Bridge
 
+> 🤖 **AI 代工声明**：本项目代码由 AI（Claude Code / DeepSeek 等）辅助生成、修改与维护，经人工审查与实机验证后发布。使用者请自行测试后再用于重要场景。
+
 把 QQ（OneBot11/LLOneBot）接到 **ACP agent**（如 Claude Code CLI）的桥接器。QQ 消息 → LLOneBot → 本桥 → ACP → agent（经 claude CLI 可对接任意 Anthropic 兼容后端）→ 回发 QQ。
 
 零第三方运行时依赖（仅 Node.js 20+；ACP 侧复用既有生态的 `acpx` + `claude` CLI）。
@@ -118,3 +120,18 @@ wsl -d <发行版> -u root -- bash -c 'cd /path/to/qq-bot && exec node bridge-ac
 - `/send`、`/announce` 等 HTTP 接口默认无鉴权（与旧桥一致，供内网/本机使用）；公网部署请加反向代理鉴权。
 - `whitelist.json`、`.env`、`pending_friends.json` 含敏感信息，已在 `.gitignore` 排除，切勿入库。
 - guest 用户通过 acpx `--allowed-tools ""` 完全禁用工具；user 仅只读工具。
+
+## 更新日志
+
+### 2026-08-16
+
+- **端口统一为 3457**：LLOneBot 上报、桥 `BRIDGE_PORT`、看门狗、DSH 插件 `bridgeUrl` 全部一致；看门狗以 `.env` 的 `BRIDGE_PORT` 为单一来源。
+- 看门狗 v6：改为 grep 方式读取 `.env`，避免 `source` 注入与挂起。
+- 公告草稿 10 分钟超时，防止旧草稿误发。
+- 机器人名称与群聊唤醒词外置到 `.env`（`BOT_NAME` / `WAKE_WORDS`），公开文档剥离具体人格引用。
+- 项目迁移到 `D:\qbot-agent_connection`，看门狗启动路径同步更新。
+- 配套插件仓库更新为 `dsh-pluginsANDskills-by-Ty`。
+
+### 2026-08-15 及更早
+
+- 首个功能对齐版本：ACP 会话桥、三级权限、会话持久化、串行队列、限流、超时强杀、长期记忆、B站订阅、群聊能力、人设存档/读档、HTTP 接口、看门狗。
