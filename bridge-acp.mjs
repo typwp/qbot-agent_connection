@@ -353,12 +353,13 @@ function askAgent(prompt, sessionKey, level) {
 	return new Promise((resolve) => {
 		const sessionName = sessionNameFor(sessionKey);
 		const tools = toolsArgsFor(level);
+		// --allowed-tools / --deny-all 是 acpx 全局选项，必须放在 agent 子命令（claude）之前。
 		const args = [
 			ACPX_CLI,
 			"--format",
 			"json",
-			DEFAULT_AGENT,
 			...tools,
+			DEFAULT_AGENT,
 			"-s",
 			sessionName,
 			"exec",
