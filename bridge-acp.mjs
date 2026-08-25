@@ -362,7 +362,8 @@ function askAgent(prompt, sessionKey, level) {
 			DEFAULT_AGENT,
 			"-s",
 			sessionName,
-			"exec",
+			// 必须用 prompt（持久会话）而不是 exec（一次性、不保存会话），否则 bot 没有记忆。
+			"prompt",
 			prompt,
 		];
 		console.log(
