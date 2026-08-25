@@ -348,10 +348,36 @@ async function sendQqText(msgType, targetId, text) {
 	}
 }
 
-// ── 调 acpx 驱动 agent（带会话 + 权限参数 + 超时强杀）──
-function askAgent(prompt, sessionKey, level) {
+// 确保 acpx 持久会话存在（acpx 0.13 对不存在的 session 直接 exit 4 = NO_SESSION）。
+function ensureAcpxSession(sessionName) {
 	return new Promise((resolve) => {
-		const sessionName = sessionNameFor(sessionKey);
+		const args = [ACPX_CLI, DEFAULT_AGENT, "sessions", "ensure", "--name", sessionName];
+		let child;
+		try {
+			child = spawn(process.execPath, args, {
+				cwd: __dirname,
+				env: { ...process.env, FORCE_COLOR: "0" },
+			});
+		} catch {
+			resolve(false);
+			return;
+		}
+		let stderr = "";
+		child.stderr?.on("data", (d) => (stderr += d));
+		child.on("error", () => resolve(false));
+		child.on("close", (code) => {
+			if (code !== 0) console.error(`[acp] 会话 ensure 失败(${sessionName}): ${stderr.slice(0, 200)}`);
+			resolve(code === 0);
+		});
+	});
+}
+
+// ── 调 acpx 驱动 agent（带会话 + 权限参数 + 超时强杀）──
+async function askAgent(prompt, sessionKey, level) {
+	const sessionName = sessionNameFor(sessionKey);
+	const ensured = await ensureAcpxSession(sessionName);
+	if (!ensured) return "(agent 会话创建失败，请稍后重试)";
+	return new Promise((resolve) => {
 		const tools = toolsArgsFor(level);
 		// --allowed-tools / --deny-all 是 acpx 全局选项，必须放在 agent 子命令（claude）之前。
 		const args = [
