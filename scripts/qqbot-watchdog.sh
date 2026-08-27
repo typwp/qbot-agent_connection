@@ -29,6 +29,31 @@ BRIDGE_PORT="${BRIDGE_PORT:-3457}"
 FAKE_COUNT=0
 API_FAIL_COUNT=0
 
+# 掉线重启冷却：防止扫码/手动登录前无限重启；默认 30 分钟。
+RESTART_COOLDOWN="${RESTART_COOLDOWN:-1800}"
+LAST_RESTART_FILE="/tmp/llonebot-last-restart"
+PENDING_NOTIFY_FILE="/tmp/llonebot-pending-notify"
+ADMIN_ID=$(python3 -c "import json; d=json.load(open('/home/botuser/qq-bot/whitelist.json')); print(d.get('admin',[None])[0] or '')" 2>/dev/null || true)
+now_ts() { date +%s; }
+last_restart_ts() { [ -f "$LAST_RESTART_FILE" ] && cat "$LAST_RESTART_FILE" 2>/dev/null || echo 0; }
+set_last_restart() { date +%s > "$LAST_RESTART_FILE"; }
+cooldown_left() { echo $(( RESTART_COOLDOWN - ($(now_ts) - $(last_restart_ts)) )); }
+in_cooldown() { [ "$(cooldown_left)" -gt 0 ]; }
+
+notify_admin() {
+  local msg="$1"
+  [ -z "$ADMIN_ID" ] && return
+  python3 -c "import json,sys; print(json.dumps({'user_id':'$ADMIN_ID','message':sys.argv[1]}))" "$msg" \
+    | curl -s -m 10 -X POST "http://127.0.0.1:${BRIDGE_PORT}/send" -H 'Content-Type: application/json' -d @- >/dev/null 2>&1
+}
+queue_notify() { echo "$1" > "$PENDING_NOTIFY_FILE"; }
+flush_pending_notify() {
+  if [ -f "$PENDING_NOTIFY_FILE" ]; then
+    notify_admin "$(cat "$PENDING_NOTIFY_FILE")"
+    rm -f "$PENDING_NOTIFY_FILE"
+  fi
+}
+
 # 容器已启动秒数（容器未运行返回 0）
 container_uptime() {
   local started start_ts
@@ -58,9 +83,14 @@ while true; do
     API_FAIL_COUNT=$((API_FAIL_COUNT+1))
     if [ "$GRACE" = "1" ] || [ "$API_FAIL_COUNT" -lt 3 ]; then
       echo "[watchdog] OneBot API 异常(${API_FAIL_COUNT}/3, up=${UP}s): ${FRIENDS:0:80}" >> /root/start-bot.log
+    elif in_cooldown; then
+      echo "[watchdog] OneBot API 持续异常但处于重启冷却期（剩余 $(cooldown_left)s），跳过重启 $(date)" >> /root/start-bot.log
+      API_FAIL_COUNT=0
     else
       echo "[watchdog] OneBot API 持续异常（连续3次），重启 Docker $(date)" >> /root/start-bot.log
+      queue_notify "⚠️ LLOneBot 掉线，看门狗已自动重启容器；冷却期内不会再次重启，请及时扫码/登录"
       docker restart llonebot >> /root/start-bot.log 2>&1
+      set_last_restart
       API_FAIL_COUNT=0
     fi
     sleep 60
@@ -74,15 +104,23 @@ while true; do
     FAKE_COUNT=$((FAKE_COUNT+1))
     if [ "$GRACE" = "1" ] || [ "$FAKE_COUNT" -lt 3 ]; then
       echo "[watchdog] 好友列表空(${FAKE_COUNT}/3, up=${UP}s)——数据同步中或伪在线，暂不重启" >> /root/start-bot.log
+    elif in_cooldown; then
+      echo "[watchdog] 伪在线确认但处于重启冷却期（剩余 $(cooldown_left)s），跳过重启 $(date)" >> /root/start-bot.log
+      FAKE_COUNT=0
     else
       echo "[watchdog] 伪在线确认（连续3次好友空），重启 Docker $(date)" >> /root/start-bot.log
+      queue_notify "⚠️ LLOneBot 伪在线，看门狗已自动重启容器；冷却期内不会再次重启，请及时扫码/登录"
       docker restart llonebot >> /root/start-bot.log 2>&1
+      set_last_restart
       FAKE_COUNT=0
     fi
     sleep 60
     continue
   fi
   FAKE_COUNT=0
+
+  # 恢复后补发掉线通知
+  flush_pending_notify
 
   # 4. Bridge 端口在不在？（端口与拉起同一来源：${BRIDGE_PORT}）
   if ! ss -tln | grep -q ":${BRIDGE_PORT} "; then
