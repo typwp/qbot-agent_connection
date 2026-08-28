@@ -444,6 +444,14 @@ async function askAgent(prompt, sessionKey, level) {
 		child.on("close", (code) => {
 			clearTimeout(timer);
 			const text = reply.trim();
+			if (!text) {
+				try {
+					appendFileSync(
+						join(__dirname, "bridge-debug.log"),
+						`${new Date().toISOString()} agent-exit code=${code} killed=${killed} err=${JSON.stringify(errText.slice(-500))}\n`,
+					);
+				} catch {}
+			}
 			if (text) agentSuccess();
 			else agentFailure(errText || `exit ${code}${killed ? " (timeout)" : ""}`);
 			console.log(
@@ -460,6 +468,12 @@ async function askAgent(prompt, sessionKey, level) {
 		});
 		child.on("error", (e) => {
 			clearTimeout(timer);
+			try {
+				appendFileSync(
+					join(__dirname, "bridge-debug.log"),
+					`${new Date().toISOString()} agent-spawn-error ${e.message}\n`,
+				);
+			} catch {}
 			agentFailure(e.message);
 			resolve(`(agent 启动失败: ${e.message})`);
 		});
