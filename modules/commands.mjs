@@ -157,6 +157,13 @@ export async function dispatchCommand(ctx) {
 	}
 
 	// 7. 订阅B站（群聊需群主/管理员或白名单 admin）
+	// 7a. 只有“b站订阅”没带 UID 时，给用法提示而不是当闲聊
+	if (/^(?:\/?订阅B站|\/?b站订阅|\/?bili订阅|\/?subbili)$/i.test(raw)) {
+		return {
+			reply:
+				"订阅格式：订阅B站 <UID> [dynamic|live|video|全部]\n例：b站订阅 123456 全部（默认全部）",
+		};
+	}
 	const biliSubMatch =
 		raw.match(
 			/^(?:\/?订阅B站|\/?b站订阅|\/?bili订阅)\s*(\d+)(?:\s+(dynamic|live|video|全部))*$/i,

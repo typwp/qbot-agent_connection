@@ -552,6 +552,16 @@ async function handleMessage(msg) {
 	const isPrivate = msg.message_type === "private";
 	let groupExtra = ""; // 群聊身份/上下文提示
 
+	// 群消息调试：写入 Windows 可见的 debug 日志，排查 @/命令识别
+	if (!isPrivate) {
+		try {
+			appendFileSync(
+				join(__dirname, "bridge-debug.log"),
+				`${new Date().toISOString()} group raw=${JSON.stringify(raw)} self=${msg.self_id} bot=${BOT_QQ}\n`,
+			);
+		} catch {}
+	}
+
 	// 群消息：完整过滤（@/名字唤醒/命令/引用 + 过滤机器人/自动欢迎）
 	if (!isPrivate) {
 		const g = shouldHandleGroup(
