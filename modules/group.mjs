@@ -59,10 +59,11 @@ export async function getGroupRole(groupId, userId, apiFn) {
 
 /** 群消息过滤：返回 { handle, cleaned, triggered } 或 null（应丢弃） */
 export function shouldHandleGroup(raw, uid, selfId, botQq) {
-	const atRegex = new RegExp(`\\[CQ:at,qq=${selfId}\\]`);
+	// CQ at 码可能带 ,name=… 等附加参数，必须允许 [CQ:at,qq=xxx,...]
+	const atRegex = new RegExp(`\\[CQ:at,qq=${selfId}(?:,[^\\]]*)?\\]`);
 	let isAtBot = atRegex.test(raw);
 	if (!isAtBot && botQq && String(selfId) !== String(botQq)) {
-		isAtBot = new RegExp(`\\[CQ:at,qq=${botQq}\\]`).test(raw);
+		isAtBot = new RegExp(`\\[CQ:at,qq=${botQq}(?:,[^\\]]*)?\\]`).test(raw);
 	}
 	// 名字唤醒（WAKE_WORDS 环境变量指定正则，如「bot名|昵称」；默认关闭）
 	const wakeWords = process.env.WAKE_WORDS || "";
