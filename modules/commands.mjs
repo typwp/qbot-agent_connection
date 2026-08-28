@@ -133,8 +133,12 @@ export async function dispatchCommand(ctx) {
 		return null;
 	}
 
-	// 6. 订阅列表（群聊查群订阅）
-	if (/^(?:\/?(?:我的)?订阅列表|\/?listbili)$/i.test(raw)) {
+	// 6. 订阅列表（群聊查群订阅；兼容「我的订阅」「B站订阅列表」等说法）
+	if (
+		/^(?:\/?(?:我的)?(?:B站|b站|bili)?订阅列表|\/?我的订阅|\/?listbili)$/i.test(
+			raw,
+		)
+	) {
 		try {
 			const subsData = JSON.parse(readFileSync(BILI_SUBS, "utf8"));
 			const subsKey =

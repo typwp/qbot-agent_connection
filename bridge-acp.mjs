@@ -701,7 +701,7 @@ async function handleMessage(msg) {
 		let r = "可用命令（加 / 前缀也可）\n\n";
 		r += "📺 B站订阅\n";
 		r += "  订阅B站 <UID> — 订阅 UP 主（别名: b站订阅 / subbili）\n";
-		r += "  订阅列表 — 查看已订阅\n";
+		r += "  订阅列表 / 我的订阅 — 查看已订阅\n";
 		r += "  取消订阅B站 <UID> — 退订\n\n";
 		r += "🎭 人格\n";
 		r += "  群人格 <描述> — 群主设置群专属人格\n";
