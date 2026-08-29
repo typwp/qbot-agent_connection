@@ -567,12 +567,49 @@ async function llonebotGetApi(path, body = {}) {
 const pendingFriendRequests = new Map(); // userId -> OneBot flag
 let _bridgeJustRestarted = true; // 重启标记：admin 首条消息告知 AI
 
-/** 按空行（段落）拆分为多条消息（旧桥 splitMessage 同款：agent 回复自然分段） */
+/** 按空行/句末标点拆分为多条消息：保持短句、自然分段（旧桥 splitMessage 加强版） */
 function splitMessage(text) {
-	const s = String(text ?? "");
-	const paragraphs = s.split(/\n\n+/).filter((p) => p.trim());
-	if (paragraphs.length <= 1) return [s];
-	const chunks = paragraphs.map((p) => p.trim()).filter(Boolean);
+	const s = String(text ?? "").trim();
+	if (!s) return [""];
+	const CHUNK_MAX = 160; // 超过这个长度就拆成多条，更像真人聊天
+	const paragraphs = s.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+	const chunks = [];
+	const push = (part) => {
+		const t = String(part).trim();
+		if (t) chunks.push(t);
+	};
+	for (const p of paragraphs) {
+		if (p.length <= CHUNK_MAX) {
+			push(p);
+			continue;
+		}
+		// 先按句末标点切，避免把一句话硬拆成两半
+		let buf = "";
+		for (const piece of p.split(/(?<=[。！？!?；;])/)) {
+			if ((buf + piece).length <= CHUNK_MAX) {
+				buf += piece;
+				continue;
+			}
+			if (buf) {
+				push(buf);
+				buf = "";
+			}
+			// 单个句子仍超长时，再按逗号/顿号兜底切
+			if (piece.length > CHUNK_MAX) {
+				for (const cp of piece.split(/(?<=[，,、])/)) {
+					if ((buf + cp).length <= CHUNK_MAX) {
+						buf += cp;
+					} else {
+						if (buf) push(buf);
+						buf = cp;
+					}
+				}
+			} else {
+				buf = piece;
+			}
+		}
+		if (buf) push(buf);
+	}
 	return chunks.length > 0 ? chunks : [s];
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -610,9 +647,9 @@ async function handleMessage(msg) {
 		if (!/^[/#]/.test(raw.trim())) {
 			groupCtx = await buildGroupContext(raw, msg.group_id, llonebotGetApi);
 		}
-		groupExtra = `[群聊] 发送者: ${msg.sender?.nickname || msg.user_id}。就像群友聊天一样，自然接话，两三句话说完，别太正经，也别一直喊名字刷存在感。${gpNote}${groupCtx}`;
+		groupExtra = `[群聊] 发送者: ${msg.sender?.nickname || msg.user_id}。就像群友聊天一样，自然接话，两三句说完；内容多就分几段发，别一次性甩一大段。别太正经，也别一直喊名字刷存在感。${gpNote}${groupCtx}`;
 	} else {
-		groupExtra = `[私聊] 对方昵称: ${msg.sender?.nickname || msg.user_id}。像朋友私聊一样，轻松自然，短句为主，合适时用颜文字，别长篇大论，也别频繁喊对方名字。`;
+		groupExtra = `[私聊] 对方昵称: ${msg.sender?.nickname || msg.user_id}。像朋友私聊一样，轻松自然，短句为主，能一句话就不说两句；内容多就分几段发，别长篇大论，也别频繁喊对方名字。`;
 	}
 	// 识图预处理（旧桥 L2112 同款）：图片消息转文字描述，访客无工具也能聊图
 	if (/\[CQ:image/.test(raw)) {

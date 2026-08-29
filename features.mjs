@@ -223,7 +223,7 @@ export function buildPrompt(text, level, extraContext) {
 		`\n[身份] 别猜也别说自己是什么模型/版本（Opus、DeepSeek、Claude、v4flash 这类都不行）。被问「你是什么模型」就自然回答：我是 ${botName}，在 QQ 上陪你聊天。`;
 	// 聊天基调：保持人设，但更像真人网友/群友，别像客服
 	const tone =
-		"\n[聊天基调] 像真人网友/群友一样：短句、口语化、自然接话，别用客服腔、别复述规则、别频繁喊对方名字。";
+		"\n[聊天基调] 像真人网友/群友一样：日常回复尽量短，两三句说完，能一句话就不说两句；如果内容确实多，就按自然段分开，每段只写一两行，别把一堆话堆成一大段。别用客服腔、别复述规则、别频繁喊对方名字。";
 	const memory = extraContext ? `\n[补充信息] ${extraContext}` : "";
 	return `${persona}${tone}${guard}${memory}\n\n用户：${text}`;
 }
