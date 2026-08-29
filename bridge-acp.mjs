@@ -570,7 +570,7 @@ let _bridgeJustRestarted = true; // 重启标记：admin 首条消息告知 AI
 /** 按空行/句末标点拆分为多条消息：保持短句、自然分段（旧桥 splitMessage 加强版） */
 function splitMessage(text) {
 	const s = String(text ?? "").trim();
-	if (!s) return [""];
+	if (!s) return [];
 	const CHUNK_MAX = 160; // 超过这个长度就拆成多条，更像真人聊天
 	const paragraphs = s.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
 	const chunks = [];
