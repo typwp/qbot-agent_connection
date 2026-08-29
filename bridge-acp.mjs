@@ -610,9 +610,9 @@ async function handleMessage(msg) {
 		if (!/^[/#]/.test(raw.trim())) {
 			groupCtx = await buildGroupContext(raw, msg.group_id, llonebotGetApi);
 		}
-		groupExtra = `[群聊] 发送者: ${msg.sender?.nickname || msg.user_id}。像群友一样说话，两三句话以内。${gpNote}${groupCtx}`;
+		groupExtra = `[群聊] 发送者: ${msg.sender?.nickname || msg.user_id}。像群友一样说话，两三句话以内，不要频繁喊对方名字。${gpNote}${groupCtx}`;
 	} else {
-		groupExtra = `[私聊] 对方昵称: ${msg.sender?.nickname || msg.user_id}。像真人网友一样聊天，两三句话以内，适当时用颜文字，不要长篇大论。`;
+		groupExtra = `[私聊] 对方昵称: ${msg.sender?.nickname || msg.user_id}。像真人网友一样聊天，两三句话以内，适当时用颜文字，不要长篇大论，也不要频繁喊对方名字。`;
 	}
 	// 识图预处理（旧桥 L2112 同款）：图片消息转文字描述，访客无工具也能聊图
 	if (/\[CQ:image/.test(raw)) {

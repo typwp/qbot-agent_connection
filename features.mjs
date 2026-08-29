@@ -200,7 +200,7 @@ export function loadLegacyMemory(uid) {
 export function loadLegacyContext(uid) {
 	const memory = loadLegacyMemory(uid);
 	if (!memory) return "";
-	return `[关于此用户的长期记忆（跨会话保留，可能过时——与用户当前说法冲突时，一律以用户当前说法为准并视旧记忆作废）: ${memory}]\n[称呼规则] 称呼对方时，必须使用长期记忆中用户自称的名字（如「天一」），不得套用记忆之外的名字（如「冈部」）；除非用户本人当面纠正。`;
+	return `[关于此用户的长期记忆（跨会话保留，可能过时——与用户当前说法冲突时，一律以用户当前说法为准并视旧记忆作废）: ${memory}]\n[称呼规则] 像真人一样自然聊天，不要频繁喊对方名字；只有在需要确认对象或正式称呼时才用名字。`;
 }
 
 /** 构建发往 agent 的 prompt（按级别注入人格 + 权限护栏） */
