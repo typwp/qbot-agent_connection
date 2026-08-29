@@ -50,7 +50,7 @@ import {
 	buildGroupContext,
 } from "./modules/group.mjs";
 import { tryVision } from "./modules/vision.mjs";
-import { saveSticker, stickerLibraryContext, stickerizeReply } from "./modules/stickers.mjs";
+import { saveSticker, stickerLibraryContext, extractStickers } from "./modules/stickers.mjs";
 import { getUserPrompt, loadUserPrompts } from "./modules/persona.mjs";
 import { needsThinkingIndicator, pickThinkingReply } from "./modules/thinking.mjs";
 import {
@@ -345,6 +345,22 @@ async function sendQqText(msgType, targetId, text) {
 		return okAll;
 	} catch (e) {
 		console.error("[qq→] 发送失败:", e.message);
+		return false;
+	}
+}
+/** 单独发送一张表情图片（base64 很长，不能走 sendQqText 的 4000 字分片）。 */
+async function sendSticker(msgType, targetId, cq) {
+	try {
+		const url = msgType === "group" ? "/send_group_msg" : "/send_private_msg";
+		const base =
+			msgType === "group"
+				? { group_id: Number(targetId) }
+				: { user_id: Number(targetId) };
+		const j = await postOneBot(url, { ...base, message: cq });
+		console.log(`[qq→] ${msgType}:${targetId} [sticker] retcode=${j.retcode} status=${j.status}`);
+		return j.retcode === 0 || j.status === "ok";
+	} catch (e) {
+		console.error("[qq→] 表情发送失败:", e.message);
 		return false;
 	}
 }
@@ -868,8 +884,8 @@ async function handleMessage(msg) {
 	const reply = await askAgent(prompt, sessionKey, level);
 	logChat(uid, msg.sender?.nickname || "?", "out", reply);
 	logTokenUsage(uid, null, raw.length, reply.length);
-	// 把 [STICKER:id] 替换成 QQ 图片消息
-	const replyText = stickerizeReply(reply);
+	// 摘出 [STICKER:id]，文字和表情分开发送（表情 base64 很长不能分片）
+	const { text: replyText, stickers } = extractStickers(reply);
 	// 分条发送（旧桥 L2228 同款）：按空行分段，每段一条消息，段间 800ms；群聊首条带引用防串话
 	const chunks = splitMessage(replyText);
 	for (let i = 0; i < chunks.length; i++) {
@@ -879,6 +895,10 @@ async function handleMessage(msg) {
 				: "";
 		await sendQqText(targetType, targetId, prefix + chunks[i]);
 		if (chunks.length > 1 && i < chunks.length - 1) await sleep(800);
+	}
+	for (const cq of stickers) {
+		await sleep(300);
+		await sendSticker(targetType, targetId, cq);
 	}
 }
 

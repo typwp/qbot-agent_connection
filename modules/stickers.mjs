@@ -156,18 +156,28 @@ export function stickerLibraryContext() {
 	return `[表情库] 可用表情：${list}\n如果当前语境适合发一张表情，在回复末尾追加 [STICKER:<id>]（id 必须是上面列出的），不要编造不存在的 id；不需要就别加。`;
 }
 
-/** 提取回复中的表情 token，并替换为 CQ 图片消息。 */
-export function stickerizeReply(text) {
-	if (!/[STICKER:[a-zA-Z0-9_-]+\]/.test(text || "")) return text;
-	return String(text || "").replace(/\[STICKER:([a-zA-Z0-9_-]+)\]/g, (m, id) => {
-		const entries = loadIndex();
-		const entry = entries.find((e) => e.id === id);
-		if (!entry || !existsSync(entry.file)) return m;
-		try {
-			const buf = readFileSync(entry.file);
-			return `[CQ:image,file=base64://${buf.toString("base64")}]`;
-		} catch {
-			return m;
-		}
-	});
+function stickerCq(id) {
+	const entries = loadIndex();
+	const entry = entries.find((e) => e.id === id);
+	if (!entry || !existsSync(entry.file)) return "";
+	try {
+		const buf = readFileSync(entry.file);
+		return `[CQ:image,file=base64://${buf.toString("base64")}]`;
+	} catch {
+		return "";
+	}
+}
+
+/** 从 agent 回复中提取表情 token：返回纯文本 + 独立 CQ 图片消息列表。 */
+export function extractStickers(text) {
+	const ids = [];
+	const cleaned = String(text || "").replace(
+		/\[STICKER:([a-zA-Z0-9_-]+)\]/g,
+		(m, id) => {
+			ids.push(id);
+			return "";
+		},
+	);
+	const stickers = ids.map(stickerCq).filter(Boolean);
+	return { text: cleaned.trim(), stickers };
 }
