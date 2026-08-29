@@ -1,49 +1,69 @@
 /**
- * vision.mjs — URL 图片识图（旧桥 tryVision 同款）
- * 匹配 [CQ:image,url=...] → 调 QQBOT_DIR/vision.js 子进程 → 返回中文描述
+ * vision.mjs — 内置 DeepSeek-V4-Flash-Vision-Exp 识图
+ * 匹配 [CQ:image,url=...] → 直连 DeepSeek OpenAI 兼容接口，返回中文描述。
+ * 复用桥已有的 DeepSeek 认证（ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN）。
  */
-import { spawn } from "node:child_process";
-import { join } from "node:path";
 
-const DATA_ROOT = process.env.QQBOT_DIR || "/home/botuser/qq-bot";
-// vision.js 挂 CLAUDE_CWD 下（.env 配置，例如 /mnt/d/Claude）。懒解析：.env 由桥启动时加载。
-function claudeCwd() {
-	return process.env.CLAUDE_CWD || DATA_ROOT;
+/** 从 ANTHROPIC_BASE_URL 推导 OpenAI 兼容 base（/anthropic、/v1 尾巴都剥掉） */
+function openAiBase() {
+	const raw = process.env.DEEPSEEK_BASE_URL || process.env.ANTHROPIC_BASE_URL || "https://api.deepseek.com";
+	return raw
+		.replace(/\/anthropic\/?$/, "")
+		.replace(/\/v1\/?$/, "")
+		.replace(/\/?$/, "");
 }
 
 /**
  * 识别消息中的 CQ 图片。成功返回描述文本，无图/失败返回 null。
  */
-export function tryVision(raw) {
+export async function tryVision(raw) {
 	const imgMatch = String(raw || "").match(/\[CQ:image[^\]]*url=([^\],]+)/);
 	if (!imgMatch) return null;
 
 	const imgUrl = imgMatch[1];
-	console.log(`[vision] 识图: ${imgUrl.slice(0, 80)}...`);
+	const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.DEEPSEEK_API_KEY || "";
+	if (!apiKey) {
+		console.log("[vision] 缺少 DeepSeek API Key（ANTHROPIC_AUTH_TOKEN/DEEPSEEK_API_KEY）");
+		return null;
+	}
+	const model = process.env.VISION_MODEL || "deepseek-v4-flash-vision-exp";
+	const url = `${openAiBase()}/v1/chat/completions`;
 
-	return new Promise((resolve) => {
-		let child;
-		try {
-			child = spawn(process.execPath, [join(claudeCwd(), "vision.js"), "--url", imgUrl, "用中文描述这张图片"], {
-				timeout: 120000,
-			});
-		} catch (e) {
-			console.log("[vision] 启动失败:", e.message);
-			resolve(null);
-			return;
-		}
-		let stdout = "";
-		let stderr = "";
-		child.stdout.on("data", (d) => (stdout += d.toString()));
-		child.stderr.on("data", (d) => (stderr += d.toString()));
-		child.on("close", (code) => {
-			if (code === 0 && stdout.trim()) {
-				resolve(stdout.trim());
-			} else {
-				console.log("[vision] 识图失败:", stderr.slice(0, 200));
-				resolve(null);
-			}
+	console.log(`[vision] 识图(${model}): ${imgUrl.slice(0, 80)}...`);
+
+	try {
+		const res = await fetch(url, {
+			method: "POST",
+			headers: {
+				"content-type": "application/json",
+				authorization: `Bearer ${apiKey}`,
+			},
+			body: JSON.stringify({
+				model,
+				messages: [
+					{
+						role: "user",
+						content: [
+							{ type: "image_url", image_url: { url: imgUrl } },
+							{ type: "text", text: "用中文描述这张图片" },
+						],
+					},
+				],
+				stream: false,
+				max_tokens: 1024,
+			}),
+			signal: AbortSignal.timeout(120000),
 		});
-		child.on("error", () => resolve(null));
-	});
+		if (!res.ok) {
+			console.log(`[vision] API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+			return null;
+		}
+		const data = await res.json();
+		const content = data?.choices?.[0]?.message?.content;
+		const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((c) => c?.text || "").join("") : "";
+		return text.trim() || null;
+	} catch (e) {
+		console.log("[vision] 识图失败:", e.message);
+		return null;
+	}
 }
