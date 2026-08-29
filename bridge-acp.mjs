@@ -48,6 +48,7 @@ import {
 	shouldHandleGroup,
 	loadGroupPersonas,
 	buildGroupContext,
+	isReplyTargetingBot,
 } from "./modules/group.mjs";
 import { tryVision } from "./modules/vision.mjs";
 import { saveSticker, stickerLibraryContext, extractStickers } from "./modules/stickers.mjs";
@@ -639,11 +640,18 @@ async function handleMessage(msg) {
 		const pendingKey = `group:${msg.group_id}:${senderId}`;
 		const pendingExpiry = pendingEmptyAt.get(pendingKey);
 		if (pendingExpiry && Date.now() > pendingExpiry) pendingEmptyAt.delete(pendingKey);
+		// 引用消息只有在引用的是 bot 自己发的消息时才作为触发条件
+		const replyToBot = await isReplyTargetingBot(
+			raw,
+			String(msg.self_id || BOT_QQ),
+			llonebotGetApi,
+		);
 		const g = shouldHandleGroup(
 			raw,
 			senderId,
 			String(msg.self_id || BOT_QQ),
 			BOT_QQ,
+			replyToBot,
 		);
 		if (!g) {
 			// 该发送者刚发过空@：他/她的下一条消息即使没带@也回应

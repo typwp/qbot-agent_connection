@@ -58,7 +58,7 @@ export async function getGroupRole(groupId, userId, apiFn) {
 }
 
 /** 群消息过滤：返回 { handle, cleaned, triggered } 或 null（应丢弃） */
-export function shouldHandleGroup(raw, uid, selfId, botQq) {
+export function shouldHandleGroup(raw, uid, selfId, botQq, replyToBot = false) {
 	// CQ at 码可能带 ,name=… 等附加参数，必须允许 [CQ:at,qq=xxx,...]
 	const atRegex = new RegExp(`\\[CQ:at,qq=${selfId}(?:,[^\\]]*)?\\]`);
 	let isAtBot = atRegex.test(raw);
@@ -68,8 +68,8 @@ export function shouldHandleGroup(raw, uid, selfId, botQq) {
 	// 名字唤醒（WAKE_WORDS 环境变量指定正则，如「bot名|昵称」；默认关闭）
 	const wakeWords = process.env.WAKE_WORDS || "";
 	const isNameCall = wakeWords ? new RegExp(wakeWords, "i").test(raw) : false;
-	// 引用消息不再单独作为触发条件：只有 @bot / 命令 / 名字唤醒才响应，
-	// 避免“引用其他人的消息”也会让 bot 接话。
+	// 引用消息只在“引用的是 bot 自己发的消息”时触发，避免引用其他人也接话。
+	const isReply = replyToBot && /\[CQ:reply[^\]]*\]/.test(raw);
 	const isCommand =
 		/^[/#]/.test(raw.trim()) ||
 		/^(订阅|退订|(?:我的)?订阅列表|存档|读档|群?人格|重启|反馈|公告|帮助|help|b站|B站|bili)/i.test(
@@ -84,14 +84,28 @@ export function shouldHandleGroup(raw, uid, selfId, botQq) {
 	) {
 		return null;
 	}
-	if (!isAtBot && !isCommand && !isNameCall) return null;
+	if (!isAtBot && !isReply && !isCommand && !isNameCall) return null;
 
 	const cleaned = raw
 		.replace(atRegex, "")
 		.replace(/\[CQ:reply[^\]]*\]/g, "")
 		.replace(/^[,\s]*/, "")
 		.trim();
-	return { handle: true, cleaned, isAtBot, isNameCall, isCommand };
+	return { handle: true, cleaned, isAtBot, isNameCall, isCommand, isReply };
+}
+
+/** 判断引用消息是否引用的是 bot 自己发的消息（通过 get_msg 查原消息发送者） */
+export async function isReplyTargetingBot(raw, botQq, apiFn) {
+	const m = String(raw || "").match(/\[CQ:reply[^\]]*id=(\d+)/);
+	if (!m) return false;
+	try {
+		const text = await apiFn("/get_msg", { message_id: Number(m[1]) });
+		const data = JSON.parse(text)?.data;
+		const senderId = data?.sender?.user_id ?? data?.user_id;
+		return senderId != null && String(senderId) === String(botQq);
+	} catch {
+		return false;
+	}
 }
 
 /** 自适应群聊上下文（关键词相关度筛选，最多 8 条 + 最近 3 条） */
