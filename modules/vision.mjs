@@ -95,7 +95,11 @@ export async function tryVision(raw) {
 		const data = await res.json();
 		const content = data?.choices?.[0]?.message?.content;
 		const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((c) => c?.text || "").join("") : "";
-		visionDebug(text ? "ok len=" + text.length : "empty");
+		visionDebug(
+			text
+				? "ok len=" + text.length
+				: "empty response=" + JSON.stringify(data).slice(0, 600),
+		);
 		return text.trim() || null;
 	} catch (e) {
 		console.log("[vision] 识图失败:", e.message);
