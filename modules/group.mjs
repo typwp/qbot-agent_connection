@@ -68,7 +68,8 @@ export function shouldHandleGroup(raw, uid, selfId, botQq) {
 	// 名字唤醒（WAKE_WORDS 环境变量指定正则，如「bot名|昵称」；默认关闭）
 	const wakeWords = process.env.WAKE_WORDS || "";
 	const isNameCall = wakeWords ? new RegExp(wakeWords, "i").test(raw) : false;
-	const isReply = /\[CQ:reply[^\]]*\]/.test(raw);
+	// 引用消息不再单独作为触发条件：只有 @bot / 命令 / 名字唤醒才响应，
+	// 避免“引用其他人的消息”也会让 bot 接话。
 	const isCommand =
 		/^[/#]/.test(raw.trim()) ||
 		/^(订阅|退订|(?:我的)?订阅列表|存档|读档|群?人格|重启|反馈|公告|帮助|help|b站|B站|bili)/i.test(
@@ -83,7 +84,7 @@ export function shouldHandleGroup(raw, uid, selfId, botQq) {
 	) {
 		return null;
 	}
-	if (!isAtBot && !isReply && !isCommand && !isNameCall) return null;
+	if (!isAtBot && !isCommand && !isNameCall) return null;
 
 	const cleaned = raw
 		.replace(atRegex, "")
