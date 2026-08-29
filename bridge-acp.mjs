@@ -565,6 +565,8 @@ async function llonebotGetApi(path, body = {}) {
 
 // ── 消息处理入口 ──
 const pendingFriendRequests = new Map(); // userId -> OneBot flag
+const pendingEmptyAt = new Map(); // "group:uid" -> 过期时间；空@后等该发送者下一条消息
+const PENDING_EMPTY_AT_TTL = 5 * 60 * 1000; // 空@等待下一条消息的最长时间
 let _bridgeJustRestarted = true; // 重启标记：admin 首条消息告知 AI
 
 /** 按空行/句末标点拆分为多条消息：保持短句、自然分段（旧桥 splitMessage 加强版） */
@@ -633,14 +635,31 @@ async function handleMessage(msg) {
 
 	// 群消息：完整过滤（@/名字唤醒/命令/引用 + 过滤机器人/自动欢迎）
 	if (!isPrivate) {
+		const senderId = String(msg.user_id ?? "");
+		const pendingKey = `group:${msg.group_id}:${senderId}`;
+		const pendingExpiry = pendingEmptyAt.get(pendingKey);
+		if (pendingExpiry && Date.now() > pendingExpiry) pendingEmptyAt.delete(pendingKey);
 		const g = shouldHandleGroup(
 			raw,
-			String(msg.user_id ?? ""),
+			senderId,
 			String(msg.self_id || BOT_QQ),
 			BOT_QQ,
 		);
-		if (!g) return;
-		raw = g.cleaned;
+		if (!g) {
+			// 该发送者刚发过空@：他/她的下一条消息即使没带@也回应
+			if (!pendingEmptyAt.has(pendingKey)) return;
+			pendingEmptyAt.delete(pendingKey);
+			console.log(`[group] 空@后的下一条消息，${senderId} 触发回复`);
+		} else {
+			raw = g.cleaned;
+			// 空@：暂不回复，等该发送者下一条消息
+			if (!raw && g.isAtBot) {
+				pendingEmptyAt.set(pendingKey, Date.now() + PENDING_EMPTY_AT_TTL);
+				console.log(`[group] 收到空@，暂不回复，等待 ${senderId} 下一条消息`);
+				return;
+			}
+			pendingEmptyAt.delete(pendingKey);
+		}
 		// 群聊身份提示 + 群人格 + 自适应上下文
 		const gp = loadGroupPersonas()[String(msg.group_id)];
 		const gpNote = gp ? `\n[群人格设定: ${gp}]` : "";
