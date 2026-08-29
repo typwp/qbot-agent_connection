@@ -30,7 +30,8 @@ export async function tryVision(raw) {
 	const imgMatch = String(raw || "").match(/\[CQ:image[^\]]*url=([^\],]+)/);
 	if (!imgMatch) return null;
 
-	const imgUrl = imgMatch[1];
+	// OneBot 的 CQ 码里 & 可能被转成 &amp;，直接 fetch 会 400，先解码。
+	const imgUrl = String(imgMatch[1]).replace(/&amp;/g, "&").replace(/&#38;/g, "&");
 	const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.DEEPSEEK_API_KEY || "";
 	if (!apiKey) {
 		console.log("[vision] 缺少 DeepSeek API Key（ANTHROPIC_AUTH_TOKEN/DEEPSEEK_API_KEY）");
