@@ -142,14 +142,15 @@ export async function saveSticker(raw, sender) {
 	}
 }
 
-/** 注入 agent 的表情库上下文。 */
-export function stickerLibraryContext() {
+/** 注入 agent 的表情库上下文。excludeAfter 用于排除刚收到/刚入库的图，避免把用户刚发的图原样回发。 */
+export function stickerLibraryContext(excludeAfter) {
 	const entries = loadIndex();
-	if (!entries.length) return "";
-	const list = entries.slice(0, MAX_CONTEXT_STICKERS)
+	const visible = excludeAfter ? entries.filter((e) => !(e.ts > excludeAfter)) : entries;
+	if (!visible.length) return "";
+	const list = visible.slice(0, MAX_CONTEXT_STICKERS)
 		.map((e) => `${e.id}(${e.name}/${e.tags.join("、")})`)
 		.join(" ");
-	return `[表情库] 可用表情：${list}\n如果当前语境适合发一张表情，在回复末尾追加 [STICKER:<id>]（id 必须是上面列出的），不要编造不存在的 id；不需要就别加。`;
+	return `[表情库] 可用表情：${list}\n如果当前语境适合发一张表情，在回复末尾追加 [STICKER:<id>]（id 必须是上面列出的），不要编造不存在的 id；不要把用户刚发的图原样回发，也不要在对方没在聊表情时硬发；不需要就别加。`;
 }
 
 function stickerCq(id) {

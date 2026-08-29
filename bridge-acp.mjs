@@ -619,6 +619,7 @@ async function handleMessage(msg) {
 	let raw = String(msg.raw_message ?? "").trim();
 	const isPrivate = msg.message_type === "private";
 	let groupExtra = ""; // 群聊身份/上下文提示
+	let stickerCutoff = 0; // 收到图片后记录时间，禁止本轮把刚入库的图当表情回发
 
 	// 群消息调试：写入 Windows 可见的 debug 日志，排查 @/命令识别
 	if (!isPrivate) {
@@ -654,6 +655,8 @@ async function handleMessage(msg) {
 	// 识图预处理（旧桥 L2112 同款）：图片消息转文字描述，访客无工具也能聊图
 	if (/\[CQ:image/.test(raw)) {
 		// 自主表情库：后台让模型判断是否值得收藏（不阻塞回复）
+		// 先记下当前时间，稍后注入表情库时排除刚收到的这张图，避免原样回发
+		stickerCutoff = Date.now();
 		saveSticker(raw, String(msg.user_id ?? msg.group_id ?? "?")).catch(() => {});
 		const visionResult = await tryVision(raw);
 		raw =
@@ -912,7 +915,7 @@ async function handleMessage(msg) {
 		timeNoteText,
 		legacy,
 		groupExtra,
-		stickerLibraryContext(),
+		stickerLibraryContext(stickerCutoff),
 	]
 		.filter(Boolean)
 		.join("\n");
