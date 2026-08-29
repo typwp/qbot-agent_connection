@@ -36,7 +36,9 @@ export async function tryVision(raw) {
 		console.log("[vision] 缺少 DeepSeek API Key（ANTHROPIC_AUTH_TOKEN/DEEPSEEK_API_KEY）");
 		return null;
 	}
-	const model = process.env.VISION_MODEL || "deepseek-v4-flash-vision-exp";
+	// 注意：不要复用旧识图脚本的 VISION_MODEL（那是千问端点 id）。
+	// DeepSeek 官方模型名固定用 deepseek-v4-flash-vision-exp，可被 DEEPSEEK_VISION_MODEL 覆盖。
+	const model = process.env.DEEPSEEK_VISION_MODEL || "deepseek-v4-flash-vision-exp";
 	const url = `${openAiBase()}/v1/chat/completions`;
 
 	console.log(`[vision] 识图(${model}): ${imgUrl.slice(0, 80)}...`);
