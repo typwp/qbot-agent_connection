@@ -50,6 +50,7 @@ import {
 	buildGroupContext,
 } from "./modules/group.mjs";
 import { tryVision } from "./modules/vision.mjs";
+import { saveSticker, stickerLibraryContext, stickerizeReply } from "./modules/stickers.mjs";
 import { getUserPrompt, loadUserPrompts } from "./modules/persona.mjs";
 import { needsThinkingIndicator, pickThinkingReply } from "./modules/thinking.mjs";
 import {
@@ -599,6 +600,8 @@ async function handleMessage(msg) {
 	}
 	// 识图预处理（旧桥 L2112 同款）：图片消息转文字描述，访客无工具也能聊图
 	if (/\[CQ:image/.test(raw)) {
+		// 自主表情库：后台让模型判断是否值得收藏（不阻塞回复）
+		saveSticker(raw, String(msg.user_id ?? msg.group_id ?? "?")).catch(() => {});
 		const visionResult = await tryVision(raw);
 		raw =
 			(raw ? raw + "\n\n" : "") +
@@ -856,6 +859,7 @@ async function handleMessage(msg) {
 		timeNoteText,
 		legacy,
 		groupExtra,
+		stickerLibraryContext(),
 	]
 		.filter(Boolean)
 		.join("\n");
@@ -864,8 +868,10 @@ async function handleMessage(msg) {
 	const reply = await askAgent(prompt, sessionKey, level);
 	logChat(uid, msg.sender?.nickname || "?", "out", reply);
 	logTokenUsage(uid, null, raw.length, reply.length);
+	// 把 [STICKER:id] 替换成 QQ 图片消息
+	const replyText = stickerizeReply(reply);
 	// 分条发送（旧桥 L2228 同款）：按空行分段，每段一条消息，段间 800ms；群聊首条带引用防串话
-	const chunks = splitMessage(reply);
+	const chunks = splitMessage(replyText);
 	for (let i = 0; i < chunks.length; i++) {
 		const prefix =
 			i === 0 && !isPrivate && msg.message_id
