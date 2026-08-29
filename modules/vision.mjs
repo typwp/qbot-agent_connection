@@ -6,6 +6,7 @@
 import { appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { decodeCqImgUrl, detectImageMime } from "./image-util.mjs";
 
 const VISION_DEBUG = join(dirname(fileURLToPath(import.meta.url)), "..", "bridge-debug.log");
 function visionDebug(line) {
@@ -31,7 +32,7 @@ export async function tryVision(raw) {
 	if (!imgMatch) return null;
 
 	// OneBot 的 CQ 码里 & 可能被转成 &amp;，直接 fetch 会 400，先解码。
-	const imgUrl = String(imgMatch[1]).replace(/&amp;/g, "&").replace(/&#38;/g, "&");
+	const imgUrl = decodeCqImgUrl(imgMatch[1]);
 	const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.DEEPSEEK_API_KEY || "";
 	if (!apiKey) {
 		console.log("[vision] 缺少 DeepSeek API Key（ANTHROPIC_AUTH_TOKEN/DEEPSEEK_API_KEY）");
@@ -60,7 +61,8 @@ export async function tryVision(raw) {
 			return null;
 		}
 		const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-		const mime = imgRes.headers.get("content-type") || "image/jpeg";
+		// 按魔数识别真实格式，不信任 CDN 的 content-type（GIF 尤其容易报错）
+		const mime = detectImageMime(imgBuf) || imgRes.headers.get("content-type") || "image/jpeg";
 		const dataUrl = `data:${mime};base64,${imgBuf.toString("base64")}`;
 		visionDebug(`img-downloaded bytes=${imgBuf.length} mime=${mime}`);
 

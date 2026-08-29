@@ -4,8 +4,9 @@
  * 对话时把表情库注入 agent，允许它在回复中追加 [STICKER:<id>] 发表情。
  */
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join, extname } from "node:path";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { decodeCqImgUrl, detectImageMime } from "./image-util.mjs";
 
 const DATA_ROOT = process.env.QQBOT_DIR || "/home/botuser/qq-bot";
 const STICKER_DIR = join(DATA_ROOT, "sticker_library");
@@ -35,15 +36,9 @@ function openAiBase() {
 		.replace(/\/?$/, "");
 }
 
-function decodeImgUrl(raw) {
-	return String(raw || "")
-		.replace(/&amp;/g, "&")
-		.replace(/&#38;/g, "&");
-}
-
 function extractImgUrl(raw) {
 	const m = String(raw || "").match(/\[CQ:image[^\]]*url=([^\],]+)/);
-	return m ? decodeImgUrl(m[1]) : null;
+	return m ? decodeCqImgUrl(m[1]) : null;
 }
 
 async function downloadImage(url) {
@@ -57,7 +52,8 @@ async function downloadImage(url) {
 	if (!res.ok) throw new Error(`download ${res.status}`);
 	const buf = Buffer.from(await res.arrayBuffer());
 	if (buf.length === 0 || buf.length > MAX_IMAGE_BYTES) throw new Error(`bad size ${buf.length}`);
-	const mime = res.headers.get("content-type") || "image/jpeg";
+	// 按魔数识别真实格式，不信任 CDN 的 content-type
+	const mime = detectImageMime(buf) || res.headers.get("content-type") || "image/jpeg";
 	return { buf, mime };
 }
 
