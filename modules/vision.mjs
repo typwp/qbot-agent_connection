@@ -42,9 +42,27 @@ export async function tryVision(raw) {
 	const url = `${openAiBase()}/v1/chat/completions`;
 
 	console.log(`[vision] 识图(${model}): ${imgUrl.slice(0, 80)}...`);
-	visionDebug(`start model=${model} url=${url}`);
+	visionDebug(`start model=${model} url=${url} img=${imgUrl.slice(0, 120)}`);
 
 	try {
+		// 先自己下载图片转 base64：QQ CDN 链接带签名，DeepSeek 服务端拉不到。
+		const imgRes = await fetch(imgUrl, {
+			headers: {
+				"user-agent": "Mozilla/5.0",
+				referer: "https://qun.qq.com/",
+			},
+			signal: AbortSignal.timeout(30000),
+		});
+		if (!imgRes.ok) {
+			visionDebug(`img-download-error status=${imgRes.status}`);
+			console.log(`[vision] 图片下载失败: ${imgRes.status}`);
+			return null;
+		}
+		const imgBuf = Buffer.from(await imgRes.arrayBuffer());
+		const mime = imgRes.headers.get("content-type") || "image/jpeg";
+		const dataUrl = `data:${mime};base64,${imgBuf.toString("base64")}`;
+		visionDebug(`img-downloaded bytes=${imgBuf.length} mime=${mime}`);
+
 		const res = await fetch(url, {
 			method: "POST",
 			headers: {
@@ -57,7 +75,7 @@ export async function tryVision(raw) {
 					{
 						role: "user",
 						content: [
-							{ type: "image_url", image_url: { url: imgUrl } },
+							{ type: "image_url", image_url: { url: dataUrl } },
 							{ type: "text", text: "用中文描述这张图片" },
 						],
 					},
