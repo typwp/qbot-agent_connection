@@ -3,6 +3,16 @@
  * 匹配 [CQ:image,url=...] → 直连 DeepSeek OpenAI 兼容接口，返回中文描述。
  * 复用桥已有的 DeepSeek 认证（ANTHROPIC_BASE_URL / ANTHROPIC_AUTH_TOKEN）。
  */
+import { appendFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const VISION_DEBUG = join(dirname(fileURLToPath(import.meta.url)), "..", "bridge-debug.log");
+function visionDebug(line) {
+	try {
+		appendFileSync(VISION_DEBUG, `${new Date().toISOString()} vision ${line}\n`);
+	} catch {}
+}
 
 /** 从 ANTHROPIC_BASE_URL 推导 OpenAI 兼容 base（/anthropic、/v1 尾巴都剥掉） */
 function openAiBase() {
@@ -30,6 +40,7 @@ export async function tryVision(raw) {
 	const url = `${openAiBase()}/v1/chat/completions`;
 
 	console.log(`[vision] 识图(${model}): ${imgUrl.slice(0, 80)}...`);
+	visionDebug(`start model=${model} url=${url}`);
 
 	try {
 		const res = await fetch(url, {
@@ -55,15 +66,19 @@ export async function tryVision(raw) {
 			signal: AbortSignal.timeout(120000),
 		});
 		if (!res.ok) {
-			console.log(`[vision] API ${res.status}: ${(await res.text()).slice(0, 200)}`);
+			const body = (await res.text()).slice(0, 300);
+			console.log(`[vision] API ${res.status}: ${body}`);
+			visionDebug(`api-error status=${res.status} body=${JSON.stringify(body)}`);
 			return null;
 		}
 		const data = await res.json();
 		const content = data?.choices?.[0]?.message?.content;
 		const text = typeof content === "string" ? content : Array.isArray(content) ? content.map((c) => c?.text || "").join("") : "";
+		visionDebug(text ? "ok len=" + text.length : "empty");
 		return text.trim() || null;
 	} catch (e) {
 		console.log("[vision] 识图失败:", e.message);
+		visionDebug(`error ${e.message}`);
 		return null;
 	}
 }
