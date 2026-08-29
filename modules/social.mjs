@@ -21,7 +21,7 @@ export async function generatePokeReply(uid, askOnce) {
 	const prev = _lastPoke.get(uid);
 	if (prev && Date.now() - prev.when < POKE_COOLDOWN) return prev.reply;
 	const prompt =
-		"你被戳了一下（QQ 戳一戳彩蛋），用一句话傲娇吐槽回应。要求：中文、15字以内、用颜文字、不要markdown、像真人网友一样自然。直接输出纯文本。";
+		"你被戳了一下（QQ 戳一戳彩蛋），像群友被戳到一样，用一句话傲娇吐槽回应。要求：中文、15字以内、用颜文字、别用markdown、自然口语化。直接输出纯文本。";
 	try {
 		const r = await askOnce(prompt);
 		if (r && r.length > 3 && !r.startsWith("（处理") && !r.startsWith("(agent")) {

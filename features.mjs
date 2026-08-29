@@ -168,7 +168,7 @@ export function createReminder(parsed, msgType, targetId) {
 // 内联仅保留通用 default；完整人格外置到 personas/<BOT_PERSONA>.txt，
 // 由 getPersona() 在运行时加载 —— 个人人格不进代码、由部署者自备。
 const PERSONAS = {
-	default: `你是 QQ 机器人的 AI 后端。回答自然友好，用中文。`,
+	default: `你是 QQ 上的一个 AI 朋友。聊天要像真人网友一样：自然、口语化、简短、有温度；用中文。`,
 };
 
 /** 返回当前人格文本（BOT_PERSONA 指定；支持 personas/<key>.txt 外置加载） */
@@ -200,29 +200,32 @@ export function loadLegacyMemory(uid) {
 export function loadLegacyContext(uid) {
 	const memory = loadLegacyMemory(uid);
 	if (!memory) return "";
-	return `[关于此用户的长期记忆（跨会话保留，可能过时——与用户当前说法冲突时，一律以用户当前说法为准并视旧记忆作废）: ${memory}]\n[称呼规则] 像真人一样自然聊天，不要频繁喊对方名字；只有在需要确认对象或正式称呼时才用名字。`;
+	return `[关于你：${memory}]\n[注意] 这是跨会话记忆，可能过时；和你现在说的矛盾时，以现在为准，旧记忆作废。`;
 }
 
 /** 构建发往 agent 的 prompt（按级别注入人格 + 权限护栏） */
 export function buildPrompt(text, level, extraContext) {
-	const persona = PERSONAS[process.env.BOT_PERSONA] || PERSONAS.default;
+	const persona = getPersona();
 	let guard;
 	if (level === "admin") {
 		guard =
-			"\n[安全] 你拥有完整权限。受保护文件（whitelist.json/.env/bridge 配置）除非明确要求否则不修改。";
+			"\n[规则] 你有完整权限，但受保护文件（whitelist.json/.env/bridge 配置）除非明确要求否则不要改。";
 	} else if (level === "user") {
 		guard =
-			"\n[安全] 你是受限用户。禁止修改/删除文件、禁止执行系统级命令。仅可对话与只读查询。";
+			"\n[规则] 你只能聊天和只读查询，不能修改/删除文件，也不能执行系统级命令。";
 	} else {
 		guard =
-			"\n[安全] 你是访客。只能对话，禁止任何文件操作、命令执行、隐私查询。";
+			"\n[规则] 你只能聊天，不做文件操作、不执行命令、不查隐私。";
 	}
 	// 身份护栏：模型自报型号是幻觉重灾区（代理不暴露真实模型名），一律挡掉
 	const botName = process.env.BOT_NAME || "AI 助手";
 	guard +=
-		`\n[身份] 不要猜测或声称底层模型名称/版本（如 Opus、DeepSeek、Claude、v4flash 等具体型号）。被问及「你是什么模型」时，回答：我是 ${botName}，运行在 QQ 机器人后端。`;
-	const memory = extraContext ? `\n[上下文] ${extraContext}` : "";
-	return `${persona}${guard}${memory}\n\n用户：${text}`;
+		`\n[身份] 别猜也别说自己是什么模型/版本（Opus、DeepSeek、Claude、v4flash 这类都不行）。被问「你是什么模型」就自然回答：我是 ${botName}，在 QQ 上陪你聊天。`;
+	// 聊天基调：保持人设，但更像真人网友/群友，别像客服
+	const tone =
+		"\n[聊天基调] 像真人网友/群友一样：短句、口语化、自然接话，别用客服腔、别复述规则、别频繁喊对方名字。";
+	const memory = extraContext ? `\n[补充信息] ${extraContext}` : "";
+	return `${persona}${tone}${guard}${memory}\n\n用户：${text}`;
 }
 
 // ── 好友审批（bridge.js L957 同款，OneBot set_friend_add_request）──
